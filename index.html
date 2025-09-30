@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Partnership Instructional Walkthrough Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        :root {
+            --header-bg: #111827;
+            --body-bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --primary-blue: #3B82F6;
+            --primary-blue-hover: #2563EB;
+            --action-green: #10B981;
+            --action-green-hover: #059669;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --border-color: #D1D5DB;
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--body-bg); 
+            color: var(--text-primary); 
+        }
+        .dashboard-header { 
+            background-color: var(--header-bg); 
+            color: white; 
+        }
+        .card { 
+            background-color: var(--card-bg); 
+            border-radius: 0.75rem; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); 
+        }
+        .btn { 
+            padding: 0.75rem 1.5rem; 
+            border-radius: 0.5rem; 
+            font-weight: 600; 
+            transition: background-color 0.2s; 
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary { 
+            background-color: var(--primary-blue); 
+            color: white; 
+        }
+        .btn-primary:hover { 
+            background-color: var(--primary-blue-hover); 
+        }
+        .btn-green { 
+            background-color: var(--action-green); 
+            color: white; 
+        }
+        .btn-green:hover { 
+            background-color: var(--action-green-hover); 
+        }
+        .btn-secondary { 
+            background-color: var(--card-bg); 
+            color: var(--text-primary); 
+            border: 1px solid var(--border-color); 
+        }
+        .btn-secondary:hover { 
+            background-color: var(--body-bg); 
+        }
+        .tooltip { 
+            position: relative; 
+            display: inline-block; 
+        }
+        .tooltip .tooltiptext { 
+            visibility: hidden; 
+            width: 250px; 
+            background-color: #555; 
+            color: #fff; 
+            text-align: center; 
+            border-radius: 6px; 
+            padding: 8px; 
+            position: absolute; 
+            z-index: 1; 
+            bottom: 125%; 
+            left: 50%; 
+            margin-left: -125px; 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+            font-size: 12px;
+        }
+        .tooltip:hover .tooltiptext { 
+            visibility: visible; 
+            opacity: 1; 
+        }
+        .modal-bg { 
+            background-color: rgba(0, 0, 0, 0.5); 
+        }
+        .interval-section {
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .interval-active {
+            border-color: var(--primary-blue);
+            background-color: #EFF6FF;
+        }
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .hidden { display: none; }
+    </style>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+</head>
+<body class="antialiased">
+
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <header class="dashboard-header p-4 shadow-md">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold">The Partnership Instructional Walkthrough Dashboard</h1>
+                <div class="flex gap-4">
+                    <button onclick="showReports()" class="btn btn-secondary">View Reports</button>
+                    <button onclick="exportData()" class="btn btn-primary">Export Data</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="container mx-auto p-4 md:p-6 lg:p-8">
+            <!-- Main Form Card -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">New Walkthrough Observation</h2>
+                <p class="text-sm text-gray-600 mb-6">Begin by completing the observation details below. Each walkthrough should be 15 minutes, with data entered for three separate 5-minute intervals.</p>
+                
+                <form id="walkthrough-form" onsubmit="handleFormSubmit(event)">
+                    <!-- Basic Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div>
+                            <label for="observer-name" class="block text-sm font-medium text-gray-700 mb-2">Observer's Name</label>
+                            <select id="observer-name" class="form-input" required>
+                                <option value="">Select Observer</option>
+                                <option>Principal J. Yeager</option>
+                                <option>Assistant Principal C. Jordan</option>
+                                <option>Assistant Principal D. Taylor</option>
+                                <option>Behavior Specialist D. Edwards</option>
+                                <option>Lead Teacher K. Blunt</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="teacher-name" class="block text-sm font-medium text-gray-700 mb-2">Teacher's Name</label>
+                            <input type="text" id="teacher-name" class="form-input" placeholder="Enter teacher's name" required>
+                        </div>
+                        
+                        <div>
+                            <label for="observation-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                            <input type="date" id="observation-date" class="form-input" required>
+                        </div>
+                        
+                        <div>
+                            <label for="start-time" class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                            <input type="time" id="start-time" class="form-input" required>
+                        </div>
+                        
+                        <div>
+                            <label for="grade-level" class="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
+                            <select id="grade-level" class="form-input" required>
+                                <option value="">Select Grade</option>
+                                <option>Pre-K</option>
+                                <option>Kindergarten</option>
+                                <option>1st Grade</option>
+                                <option>2nd Grade</option>
+                                <option>3rd Grade</option>
+                                <option>4th Grade</option>
+                                <option>5th Grade</option>
+                                <option>6th Grade</option>
+                                <option>7th Grade</option>
+                                <option>8th Grade</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="subject-area" class="block text-sm font-medium text-gray-700 mb-2">Subject Area</label>
+                            <select id="subject-area" class="form-input" required>
+                                <option value="">Select Subject</option>
+                                <option>English Language Arts</option>
+                                <option>Mathematics</option>
+                                <option>Science</option>
+                                <option>Social Studies</option>
+                                <option>Art</option>
+                                <option>Music</option>
+                                <option>Physical Education</option>
+                                <option>Special Education</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="student-count" class="block text-sm font-medium text-gray-700 mb-2">Number of Students</label>
+                            <input type="number" id="student-count" class="form-input" min="1" max="50" placeholder="25" required>
+                        </div>
+                        
+                        <div>
+                            <label for="lesson-type" class="block text-sm font-medium text-gray-700 mb-2">Lesson Type</label>
+                            <select id="lesson-type" class="form-input" required>
+                                <option value="">Select Type</option>
+                                <option>Whole Group Instruction</option>
+                                <option>Small Group Work</option>
+                                <option>Independent Work</option>
+                                <option>Assessment</option>
+                                <option>Transition</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 5-Minute Intervals -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4">Observation Intervals (Click to Add Each 5-Minute Interval)</h3>
+                        <p class="text-sm text-gray-600 mb-4">You must complete all 3 intervals before saving. Count actual students for each category.</p>
+                        
+                        <!-- Interval Controls -->
+                        <div class="flex gap-4 mb-6">
+                            <button type="button" id="add-interval-1" onclick="addInterval(1)" class="btn btn-primary">Add Interval 1 (0-5 min)</button>
+                            <button type="button" id="add-interval-2" onclick="addInterval(2)" class="btn btn-secondary" disabled>Add Interval 2 (5-10 min)</button>
+                            <button type="button" id="add-interval-3" onclick="addInterval(3)" class="btn btn-secondary" disabled>Add Interval 3 (10-15 min)</button>
+                        </div>
+
+                        <!-- Interval 1 -->
+                        <div id="interval-1" class="interval-section hidden">
+                            <h4 class="font-medium text-blue-700 mb-4">📊 Interval 1 (Minutes 0-5)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Student Engagement
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count students actively engaged and participating in learning</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="student-engagement-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="student-engagement-percent-1">0%</span></div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Higher Order Thinking Questions
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count instances of analysis, synthesis, evaluation questions</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="higher-order-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="higher-order-percent-1">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Prompting and Follow-Up Questions
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count teacher prompts and follow-up questions to deepen understanding</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="prompting-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="prompting-percent-1">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Standards Aligned
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count activities clearly aligned to learning standards</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="standards-aligned-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="standards-aligned-percent-1">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Checks for Understanding
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count formative assessment and comprehension checks</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="checks-understanding-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="checks-understanding-percent-1">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Release to Independence
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count gradual release of responsibility to students</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="release-independence-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="release-independence-percent-1">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Responding to Text
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count text-based responses and evidence citations</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="responding-text-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="responding-text-percent-1">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Attention to LPS Students
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count specific attention to Limited Proficiency Students</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="attention-lps-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="attention-lps-percent-1">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Co-teaching Support
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count instances of effective co-teaching collaboration and support</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="co-teaching-1" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(1)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="co-teaching-percent-1">0%</span></div>
+                                </div>
+                                
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Observations & Notes</label>
+                                    <textarea name="notes-1" class="form-input" rows="3" placeholder="Record specific observations, student behaviors, teaching effectiveness, etc."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interval 2 -->
+                        <div id="interval-2" class="interval-section hidden">
+                            <h4 class="font-medium text-blue-700 mb-4">📊 Interval 2 (Minutes 5-10)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Student Engagement
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count students actively engaged and participating in learning</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="student-engagement-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="student-engagement-percent-2">0%</span></div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Higher Order Thinking Questions
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count instances of analysis, synthesis, evaluation questions</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="higher-order-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="higher-order-percent-2">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Prompting and Follow-Up Questions
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count teacher prompts and follow-up questions to deepen understanding</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="prompting-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="prompting-percent-2">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Standards Aligned
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count activities clearly aligned to learning standards</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="standards-aligned-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="standards-aligned-percent-2">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Checks for Understanding
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count formative assessment and comprehension checks</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="checks-understanding-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="checks-understanding-percent-2">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Release to Independence
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count gradual release of responsibility to students</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="release-independence-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="release-independence-percent-2">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Responding to Text
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count text-based responses and evidence citations</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="responding-text-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="responding-text-percent-2">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Attention to LPS Students
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count specific attention to Limited Proficiency Students</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="attention-lps-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="attention-lps-percent-2">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Co-teaching Support
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count instances of effective co-teaching collaboration and support</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="co-teaching-2" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(2)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="co-teaching-percent-2">0%</span></div>
+                                </div>
+                                
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Observations & Notes</label>
+                                    <textarea name="notes-2" class="form-input" rows="3" placeholder="Record specific observations, student behaviors, teaching effectiveness, etc."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interval 3 -->
+                        <div id="interval-3" class="interval-section hidden">
+                            <h4 class="font-medium text-blue-700 mb-4">📊 Interval 3 (Minutes 10-15)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Student Engagement
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count students actively engaged and participating in learning</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="student-engagement-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="student-engagement-percent-3">0%</span></div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Higher Order Thinking Questions
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count instances of analysis, synthesis, evaluation questions</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="higher-order-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="higher-order-percent-3">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Prompting and Follow-Up Questions
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count teacher prompts and follow-up questions to deepen understanding</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="prompting-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="prompting-percent-3">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Standards Aligned
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count activities clearly aligned to learning standards</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="standards-aligned-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="standards-aligned-percent-3">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Checks for Understanding
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count formative assessment and comprehension checks</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="checks-understanding-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="checks-understanding-percent-3">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Release to Independence
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count gradual release of responsibility to students</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="release-independence-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="release-independence-percent-3">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Responding to Text
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count text-based responses and evidence citations</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="responding-text-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="responding-text-percent-3">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Attention to LPS Students
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count specific attention to Limited Proficiency Students</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="attention-lps-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="attention-lps-percent-3">0%</span></div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Co-teaching Support
+                                        <div class="tooltip">
+                                            <span class="text-blue-500 cursor-help">ℹ️</span>
+                                            <span class="tooltiptext">Count instances of effective co-teaching collaboration and support</span>
+                                        </div>
+                                    </label>
+                                    <input type="number" name="co-teaching-3" class="form-input" min="0" max="30" placeholder="0" onchange="updatePercentages(3)" required>
+                                    <div class="text-sm text-gray-500 mt-1">Percentage: <span id="co-teaching-percent-3">0%</span></div>
+                                </div>
+                                
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Observations & Notes</label>
+                                    <textarea name="notes-3" class="form-input" rows="3" placeholder="Record specific observations, student behaviors, teaching effectiveness, etc."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overall Assessment -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4">Overall Assessment</h3>
+                        <div class="grid grid-cols-1 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Strengths Observed</label>
+                                <textarea id="strengths" class="form-input" rows="3" placeholder="Highlight positive aspects of the lesson and teaching practices observed..."></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Areas for Growth</label>
+                                <textarea id="growth-areas" class="form-input" rows="3" placeholder="Suggest areas for improvement and professional development opportunities..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex justify-end gap-4">
+                        <button type="button" onclick="resetForm()" class="btn btn-secondary">Reset Form</button>
+                        <button type="submit" class="btn btn-green opacity-50" disabled>Save Walkthrough (Complete all 3 intervals first)</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Weekly Progress Tracker -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Weekly Progress Tracker</h2>
+                <div id="weekly-progress" class="mb-6">
+                    <!-- Weekly progress will be populated here -->
+                </div>
+                <div id="weekly-reports" class="hidden">
+                    <!-- Weekly reports will be shown here when criteria is met -->
+                </div>
+            </div>
+
+            <!-- Recent Observations -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Recent Observations</h2>
+                <div id="recent-observations" class="space-y-4">
+                    <!-- Sample data will be populated here -->
+                </div>
+            </div>
+
+            <!-- Analytics Dashboard -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Student Engagement Trends</h3>
+                    <canvas id="engagementChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Higher Order Thinking Trends</h3>
+                    <canvas id="higherOrderChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Standards Alignment Trends</h3>
+                    <canvas id="standardsChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Checks for Understanding Trends</h3>
+                    <canvas id="checksChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Prompting & Follow-up Trends</h3>
+                    <canvas id="promptingChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Release to Independence Trends</h3>
+                    <canvas id="releaseChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Responding to Text Trends</h3>
+                    <canvas id="textChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Attention to LPS Students Trends</h3>
+                    <canvas id="lpsChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Co-teaching Support Trends</h3>
+                    <canvas id="coTeachingChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="fixed inset-0 modal-bg flex items-center justify-center z-50 hidden">
+            <div class="card p-6 max-w-md mx-4">
+                <div class="text-center">
+                    <div class="text-green-500 text-4xl mb-4">✅</div>
+                    <h3 class="text-lg font-semibold mb-2">Walkthrough Saved Successfully!</h3>
+                    <p class="text-gray-600 mb-4">Your observation has been recorded and added to the database.</p>
+                    <button onclick="closeModal()" class="btn btn-primary">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Modal -->
+        <div id="reports-modal" class="fixed inset-0 modal-bg flex items-center justify-center z-50 hidden">
+            <div class="card p-6 max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Walkthrough Reports</h3>
+                    <button onclick="closeReportsModal()" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+                </div>
+                <div id="reports-content">
+                    <!-- Reports content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let observations = JSON.parse(localStorage.getItem('walkthroughObservations')) || [];
+        let currentInterval = 1;
+        let completedIntervals = [];
+        const REQUIRED_WEEKLY_OBSERVATIONS = 12;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set today's date as default
+            document.getElementById('observation-date').value = new Date().toISOString().split('T')[0];
+            
+            // Load recent observations
+            loadRecentObservations();
+            
+            // Initialize charts
+            initializeCharts();
+            
+            // Load weekly progress
+            loadWeeklyProgress();
+            
+            // Generate dropdown options
+            generateDropdownOptions();
+        });
+
+        function generateDropdownOptions() {
+            // This function is called during initialization to populate dropdowns
+            // The dropdown options are already generated in the HTML template
+        }
+
+        function addInterval(intervalNum) {
+            // Show the interval section
+            document.getElementById(`interval-${intervalNum}`).classList.remove('hidden');
+            
+            // Mark this interval as completed
+            if (!completedIntervals.includes(intervalNum)) {
+                completedIntervals.push(intervalNum);
+            }
+            
+            // Update button states
+            updateIntervalButtons();
+            
+            // Enable next interval button if available
+            if (intervalNum < 3) {
+                document.getElementById(`add-interval-${intervalNum + 1}`).disabled = false;
+                document.getElementById(`add-interval-${intervalNum + 1}`).classList.remove('btn-secondary');
+                document.getElementById(`add-interval-${intervalNum + 1}`).classList.add('btn-primary');
+            }
+            
+            // Disable current button
+            document.getElementById(`add-interval-${intervalNum}`).disabled = true;
+            document.getElementById(`add-interval-${intervalNum}`).classList.remove('btn-primary');
+            document.getElementById(`add-interval-${intervalNum}`).classList.add('btn-secondary');
+            document.getElementById(`add-interval-${intervalNum}`).textContent = `✓ Interval ${intervalNum} Added`;
+        }
+
+        function updateIntervalButtons() {
+            // Check if all intervals are completed to enable save button
+            const saveButton = document.querySelector('button[type="submit"]');
+            if (completedIntervals.length === 3) {
+                saveButton.disabled = false;
+                saveButton.classList.remove('opacity-50');
+            } else {
+                saveButton.disabled = true;
+                saveButton.classList.add('opacity-50');
+            }
+        }
+
+        function updatePercentages(intervalNum) {
+            const totalStudents = parseInt(document.getElementById('student-count').value) || 0;
+            
+            if (totalStudents === 0) {
+                alert('Please enter the total number of students first.');
+                return;
+            }
+            
+            const categories = ['student-engagement', 'higher-order', 'prompting', 'standards-aligned', 'checks-understanding', 'release-independence', 'responding-text', 'attention-lps', 'co-teaching'];
+            
+            categories.forEach(category => {
+                const input = document.querySelector(`input[name="${category}-${intervalNum}"]`);
+                const percentSpan = document.getElementById(`${category}-percent-${intervalNum}`);
+                
+                if (input && percentSpan) {
+                    const count = parseInt(input.value) || 0;
+                    const percentage = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+                    percentSpan.textContent = `${percentage}%`;
+                }
+            });
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            // Check if all intervals are completed
+            if (completedIntervals.length !== 3) {
+                alert('Please complete all 3 intervals before saving.');
+                return;
+            }
+            
+            const formData = new FormData(event.target);
+            const totalStudents = parseInt(document.getElementById('student-count').value);
+            
+            const observation = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                observerName: document.getElementById('observer-name').value,
+                teacherName: document.getElementById('teacher-name').value,
+                date: document.getElementById('observation-date').value,
+                startTime: document.getElementById('start-time').value,
+                gradeLevel: document.getElementById('grade-level').value,
+                subjectArea: document.getElementById('subject-area').value,
+                studentCount: totalStudents,
+                lessonType: document.getElementById('lesson-type').value,
+                intervals: [
+                    {
+                        studentEngagement: parseInt(formData.get('student-engagement-1')) || 0,
+                        higherOrder: parseInt(formData.get('higher-order-1')) || 0,
+                        prompting: parseInt(formData.get('prompting-1')) || 0,
+                        standardsAligned: parseInt(formData.get('standards-aligned-1')) || 0,
+                        checksUnderstanding: parseInt(formData.get('checks-understanding-1')) || 0,
+                        releaseIndependence: parseInt(formData.get('release-independence-1')) || 0,
+                        respondingText: parseInt(formData.get('responding-text-1')) || 0,
+                        attentionLps: parseInt(formData.get('attention-lps-1')) || 0,
+                        coTeaching: parseInt(formData.get('co-teaching-1')) || 0,
+                        notes: formData.get('notes-1') || '',
+                        percentages: calculatePercentages(1, totalStudents)
+                    },
+                    {
+                        studentEngagement: parseInt(formData.get('student-engagement-2')) || 0,
+                        higherOrder: parseInt(formData.get('higher-order-2')) || 0,
+                        prompting: parseInt(formData.get('prompting-2')) || 0,
+                        standardsAligned: parseInt(formData.get('standards-aligned-2')) || 0,
+                        checksUnderstanding: parseInt(formData.get('checks-understanding-2')) || 0,
+                        releaseIndependence: parseInt(formData.get('release-independence-2')) || 0,
+                        respondingText: parseInt(formData.get('responding-text-2')) || 0,
+                        attentionLps: parseInt(formData.get('attention-lps-2')) || 0,
+                        coTeaching: parseInt(formData.get('co-teaching-2')) || 0,
+                        notes: formData.get('notes-2') || '',
+                        percentages: calculatePercentages(2, totalStudents)
+                    },
+                    {
+                        studentEngagement: parseInt(formData.get('student-engagement-3')) || 0,
+                        higherOrder: parseInt(formData.get('higher-order-3')) || 0,
+                        prompting: parseInt(formData.get('prompting-3')) || 0,
+                        standardsAligned: parseInt(formData.get('standards-aligned-3')) || 0,
+                        checksUnderstanding: parseInt(formData.get('checks-understanding-3')) || 0,
+                        releaseIndependence: parseInt(formData.get('release-independence-3')) || 0,
+                        respondingText: parseInt(formData.get('responding-text-3')) || 0,
+                        attentionLps: parseInt(formData.get('attention-lps-3')) || 0,
+                        coTeaching: parseInt(formData.get('co-teaching-3')) || 0,
+                        notes: formData.get('notes-3') || '',
+                        percentages: calculatePercentages(3, totalStudents)
+                    }
+                ],
+                strengths: document.getElementById('strengths').value,
+                growthAreas: document.getElementById('growth-areas').value,
+                weekOf: getWeekOf(new Date(document.getElementById('observation-date').value))
+            };
+
+            // Save to localStorage
+            observations.push(observation);
+            localStorage.setItem('walkthroughObservations', JSON.stringify(observations));
+
+            // Show success modal
+            document.getElementById('success-modal').classList.remove('hidden');
+
+            // Refresh displays
+            loadRecentObservations();
+            updateCharts();
+            loadWeeklyProgress();
+        }
+
+        function calculatePercentages(intervalNum, totalStudents) {
+            const categories = ['student-engagement', 'higher-order', 'prompting', 'standards-aligned', 'checks-understanding', 'release-independence', 'responding-text', 'attention-lps', 'co-teaching'];
+            const percentages = {};
+            
+            categories.forEach(category => {
+                const input = document.querySelector(`input[name="${category}-${intervalNum}"]`);
+                const count = parseInt(input.value) || 0;
+                const key = category.replace(/-/g, '').replace('studentengagement', 'studentEngagement').replace('higherorder', 'higherOrder').replace('standardsaligned', 'standardsAligned').replace('checksunderstanding', 'checksUnderstanding').replace('releaseindependence', 'releaseIndependence').replace('respondingtext', 'respondingText').replace('attentionlps', 'attentionLps').replace('coteaching', 'coTeaching');
+                percentages[key] = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+            });
+            
+            return percentages;
+        }
+
+        function getWeekOf(date) {
+            const startOfWeek = new Date(date);
+            const day = startOfWeek.getDay();
+            const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+            startOfWeek.setDate(diff);
+            return startOfWeek.toISOString().split('T')[0];
+        }
+
+        function resetForm() {
+            document.getElementById('walkthrough-form').reset();
+            document.getElementById('observation-date').value = new Date().toISOString().split('T')[0];
+            
+            // Reset interval tracking
+            completedIntervals = [];
+            
+            // Hide all intervals
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`interval-${i}`).classList.add('hidden');
+            }
+            
+            // Reset buttons
+            document.getElementById('add-interval-1').disabled = false;
+            document.getElementById('add-interval-1').classList.remove('btn-secondary');
+            document.getElementById('add-interval-1').classList.add('btn-primary');
+            document.getElementById('add-interval-1').textContent = 'Add Interval 1 (0-5 min)';
+            
+            for (let i = 2; i <= 3; i++) {
+                document.getElementById(`add-interval-${i}`).disabled = true;
+                document.getElementById(`add-interval-${i}`).classList.remove('btn-primary');
+                document.getElementById(`add-interval-${i}`).classList.add('btn-secondary');
+                document.getElementById(`add-interval-${i}`).textContent = `Add Interval ${i} (${(i-1)*5}-${i*5} min)`;
+            }
+            
+            // Disable save button
+            const saveButton = document.querySelector('button[type="submit"]');
+            saveButton.disabled = true;
+            saveButton.classList.add('opacity-50');
+        }
+
+        function loadWeeklyProgress() {
+            const container = document.getElementById('weekly-progress');
+            const reportsContainer = document.getElementById('weekly-reports');
+            
+            // Get current week
+            const currentWeek = getWeekOf(new Date());
+            
+            // Group observations by observer and week
+            const weeklyData = {};
+            
+            observations.forEach(obs => {
+                const observer = obs.observerName;
+                const week = obs.weekOf;
+                
+                if (!weeklyData[observer]) {
+                    weeklyData[observer] = {};
+                }
+                
+                if (!weeklyData[observer][week]) {
+                    weeklyData[observer][week] = [];
+                }
+                
+                weeklyData[observer][week].push(obs);
+            });
+            
+            // Display progress for each observer
+            let progressHTML = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+            
+            const observers = ['Principal J. Yeager', 'Assistant Principal C. Jordan', 'Assistant Principal D. Taylor', 'Behavior Specialist D. Edwards', 'Lead Teacher K. Blunt'];
+            
+            observers.forEach(observer => {
+                const currentWeekCount = weeklyData[observer] && weeklyData[observer][currentWeek] ? weeklyData[observer][currentWeek].length : 0;
+                const percentage = Math.round((currentWeekCount / REQUIRED_WEEKLY_OBSERVATIONS) * 100);
+                const isComplete = currentWeekCount >= REQUIRED_WEEKLY_OBSERVATIONS;
+                
+                progressHTML += `
+                    <div class="border rounded-lg p-4 ${isComplete ? 'bg-green-50 border-green-200' : 'bg-gray-50'}">
+                        <h4 class="font-medium text-sm mb-2">${observer}</h4>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-600">${currentWeekCount}/${REQUIRED_WEEKLY_OBSERVATIONS} observations</span>
+                            <span class="text-sm font-medium ${isComplete ? 'text-green-600' : 'text-gray-600'}">${percentage}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="h-2 rounded-full ${isComplete ? 'bg-green-500' : 'bg-blue-500'}" style="width: ${Math.min(percentage, 100)}%"></div>
+                        </div>
+                        ${isComplete ? '<div class="text-xs text-green-600 mt-1">✓ Weekly goal completed!</div>' : ''}
+                    </div>
+                `;
+            });
+            
+            progressHTML += '</div>';
+            container.innerHTML = progressHTML;
+            
+            // Check if any observer has completed their weekly requirements
+            const completedObservers = observers.filter(observer => {
+                const count = weeklyData[observer] && weeklyData[observer][currentWeek] ? weeklyData[observer][currentWeek].length : 0;
+                return count >= REQUIRED_WEEKLY_OBSERVATIONS;
+            });
+            
+            if (completedObservers.length > 0) {
+                generateWeeklyReports(weeklyData, currentWeek, completedObservers);
+                reportsContainer.classList.remove('hidden');
+            } else {
+                reportsContainer.classList.add('hidden');
+            }
+        }
+
+        function generateWeeklyReports(weeklyData, currentWeek, completedObservers) {
+            const container = document.getElementById('weekly-reports');
+            
+            let reportsHTML = '<h3 class="text-lg font-semibold mb-4 text-green-700">📊 Weekly Reports Available</h3>';
+            
+            completedObservers.forEach(observer => {
+                const observations = weeklyData[observer][currentWeek];
+                const stats = calculateWeeklyStats(observations);
+                
+                reportsHTML += `
+                    <div class="border border-green-200 rounded-lg p-4 mb-4 bg-green-50">
+                        <h4 class="font-medium mb-3">${observer} - Week of ${new Date(currentWeek).toLocaleDateString()}</h4>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-green-600">${observations.length}</div>
+                                <div class="text-xs text-gray-600">Total Observations</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-blue-600">${stats.avgStudentEngagement}%</div>
+                                <div class="text-xs text-gray-600">Avg Engagement</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-purple-600">${stats.avgHigherOrder}%</div>
+                                <div class="text-xs text-gray-600">Higher Order Questions</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-orange-600">${stats.avgStandardsAligned}%</div>
+                                <div class="text-xs text-gray-600">Standards Aligned</div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-sm">
+                            <strong>Trends:</strong>
+                            <ul class="list-disc list-inside mt-1 text-gray-700">
+                                <li>Prompting & Follow-up: ${stats.avgPrompting}% average across observations</li>
+                                <li>Checks for Understanding: ${stats.avgChecksUnderstanding}% average</li>
+                                <li>Release to Independence: ${stats.avgReleaseIndependence}% average</li>
+                                <li>Responding to Text: ${stats.avgRespondingText}% average</li>
+                                <li>Attention to LPS Students: ${stats.avgAttentionLps}% average</li>
+                                <li>Co-teaching Support: ${stats.avgCoTeaching}% average</li>
+                                <li>Most common lesson type: ${stats.mostCommonLessonType}</li>
+                                <li>Average class size: ${stats.avgClassSize} students</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = reportsHTML;
+        }
+
+        function calculateWeeklyStats(observations) {
+            const totals = {
+                studentEngagement: 0,
+                higherOrder: 0,
+                prompting: 0,
+                standardsAligned: 0,
+                checksUnderstanding: 0,
+                releaseIndependence: 0,
+                respondingText: 0,
+                attentionLps: 0,
+                coTeaching: 0,
+                classSize: 0
+            };
+            
+            const lessonTypes = {};
+            let totalIntervals = 0;
+            
+            observations.forEach(obs => {
+                totals.classSize += obs.studentCount;
+                
+                // Count lesson types
+                lessonTypes[obs.lessonType] = (lessonTypes[obs.lessonType] || 0) + 1;
+                
+                // Sum up percentages from all intervals
+                obs.intervals.forEach(interval => {
+                    totals.studentEngagement += interval.percentages.studentEngagement || 0;
+                    totals.higherOrder += interval.percentages.higherOrder || 0;
+                    totals.prompting += interval.percentages.prompting || 0;
+                    totals.standardsAligned += interval.percentages.standardsAligned || 0;
+                    totals.checksUnderstanding += interval.percentages.checksUnderstanding || 0;
+                    totals.releaseIndependence += interval.percentages.releaseIndependence || 0;
+                    totals.respondingText += interval.percentages.respondingText || 0;
+                    totals.attentionLps += interval.percentages.attentionLps || 0;
+                    totals.coTeaching += interval.percentages.coTeaching || 0;
+                    totalIntervals++;
+                });
+            });
+            
+            // Calculate averages
+            const avgClassSize = Math.round(totals.classSize / observations.length);
+            const avgStudentEngagement = Math.round(totals.studentEngagement / totalIntervals);
+            const avgHigherOrder = Math.round(totals.higherOrder / totalIntervals);
+            const avgPrompting = Math.round(totals.prompting / totalIntervals);
+            const avgStandardsAligned = Math.round(totals.standardsAligned / totalIntervals);
+            const avgChecksUnderstanding = Math.round(totals.checksUnderstanding / totalIntervals);
+            const avgReleaseIndependence = Math.round(totals.releaseIndependence / totalIntervals);
+            const avgRespondingText = Math.round(totals.respondingText / totalIntervals);
+            const avgAttentionLps = Math.round(totals.attentionLps / totalIntervals);
+            const avgCoTeaching = Math.round(totals.coTeaching / totalIntervals);
+            
+            // Find most common lesson type
+            const mostCommonLessonType = Object.keys(lessonTypes).reduce((a, b) => 
+                lessonTypes[a] > lessonTypes[b] ? a : b
+            );
+            
+            return {
+                avgStudentEngagement,
+                avgHigherOrder,
+                avgPrompting,
+                avgStandardsAligned,
+                avgChecksUnderstanding,
+                avgReleaseIndependence,
+                avgRespondingText,
+                avgAttentionLps,
+                avgCoTeaching,
+                avgClassSize,
+                mostCommonLessonType
+            };
+        }
+
+        function closeModal() {
+            document.getElementById('success-modal').classList.add('hidden');
+            resetForm();
+        }
+
+        function loadRecentObservations() {
+            const container = document.getElementById('recent-observations');
+            const recentObs = observations.slice(-5).reverse();
+
+            if (recentObs.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">No observations recorded yet. Complete your first walkthrough above!</p>';
+                return;
+            }
+
+            container.innerHTML = recentObs.map(obs => `
+                <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-medium">${obs.teacherName} - ${obs.gradeLevel} ${obs.subjectArea}</h4>
+                            <p class="text-sm text-gray-600">${obs.observerName} • ${new Date(obs.date).toLocaleDateString()} • ${obs.startTime}</p>
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${obs.studentCount} students</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="font-medium">Avg Engagement:</span>
+                            <div class="text-blue-600 font-medium">${calculateAvgEngagement(obs.intervals)}%</div>
+                        </div>
+                        <div>
+                            <span class="font-medium">Students:</span> ${obs.studentCount}
+                        </div>
+                        <div>
+                            <span class="font-medium">Type:</span> ${obs.lessonType}
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        Engagement: ${obs.intervals.map((interval, i) => `${interval.percentages.studentEngagement || 0}%`).join(' → ')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function calculateAvgEngagement(intervals) {
+            const total = intervals.reduce((sum, interval) => sum + (interval.percentages.studentEngagement || 0), 0);
+            return Math.round(total / intervals.length);
+        }
+
+        function getEffectivenessColor(effectiveness) {
+            const colors = {
+                'excellent': 'bg-green-100 text-green-800',
+                'good': 'bg-blue-100 text-blue-800',
+                'satisfactory': 'bg-yellow-100 text-yellow-800',
+                'needs-improvement': 'bg-red-100 text-red-800'
+            };
+            return colors[effectiveness] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getEngagementColor(engagement) {
+            const colors = {
+                'high': 'bg-green-500',
+                'medium': 'bg-yellow-500',
+                'low': 'bg-red-500'
+            };
+            return colors[engagement] || 'bg-gray-300';
+        }
+
+        function initializeCharts() {
+            const chartConfigs = [
+                { id: 'engagementChart', label: 'Student Engagement %', color: '#10B981' },
+                { id: 'higherOrderChart', label: 'Higher Order Thinking %', color: '#3B82F6' },
+                { id: 'standardsChart', label: 'Standards Aligned %', color: '#F59E0B' },
+                { id: 'checksChart', label: 'Checks for Understanding %', color: '#EF4444' },
+                { id: 'promptingChart', label: 'Prompting & Follow-up %', color: '#8B5CF6' },
+                { id: 'releaseChart', label: 'Release to Independence %', color: '#06B6D4' },
+                { id: 'textChart', label: 'Responding to Text %', color: '#EC4899' },
+                { id: 'lpsChart', label: 'Attention to LPS Students %', color: '#84CC16' },
+                { id: 'coTeachingChart', label: 'Co-teaching Support %', color: '#F97316' }
+            ];
+
+            // Create all trend charts
+            chartConfigs.forEach(config => {
+                const ctx = document.getElementById(config.id).getContext('2d');
+                window[config.id.replace('Chart', '') + 'Chart'] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: config.label,
+                            data: [],
+                            borderColor: config.color,
+                            backgroundColor: config.color + '20',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            updateCharts();
+        }
+
+        function updateCharts() {
+            if (observations.length === 0) return;
+
+            // Get last 10 observations for trend analysis
+            const last10Obs = observations.slice(-10);
+            const labels = last10Obs.map((obs, index) => {
+                const date = new Date(obs.date);
+                return `${date.getMonth() + 1}/${date.getDate()} ${obs.teacherName.split(' ')[0]}`;
+            });
+
+            // Calculate average percentages for each category across all intervals
+            const categoryData = {
+                engagement: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'studentEngagement')),
+                higherOrder: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'higherOrder')),
+                standards: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'standardsAligned')),
+                checks: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'checksUnderstanding')),
+                prompting: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'prompting')),
+                release: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'releaseIndependence')),
+                text: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'respondingText')),
+                lps: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'attentionLps')),
+                coTeaching: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'coTeaching'))
+            };
+
+            // Update all charts
+            const chartMappings = [
+                { chart: window.engagementChart, data: categoryData.engagement },
+                { chart: window.higherOrderChart, data: categoryData.higherOrder },
+                { chart: window.standardsChart, data: categoryData.standards },
+                { chart: window.checksChart, data: categoryData.checks },
+                { chart: window.promptingChart, data: categoryData.prompting },
+                { chart: window.releaseChart, data: categoryData.release },
+                { chart: window.textChart, data: categoryData.text },
+                { chart: window.lpsChart, data: categoryData.lps },
+                { chart: window.coTeachingChart, data: categoryData.coTeaching }
+            ];
+
+            chartMappings.forEach(mapping => {
+                if (mapping.chart) {
+                    mapping.chart.data.labels = labels;
+                    mapping.chart.data.datasets[0].data = mapping.data;
+                    mapping.chart.update();
+                }
+            });
+        }
+
+        function calculateCategoryAverage(intervals, category) {
+            const total = intervals.reduce((sum, interval) => {
+                return sum + (interval.percentages[category] || 0);
+            }, 0);
+            return Math.round(total / intervals.length);
+        }
+
+        function showReports() {
+            document.getElementById('reports-modal').classList.remove('hidden');
+            generateReports();
+        }
+
+        function closeReportsModal() {
+            document.getElementById('reports-modal').classList.add('hidden');
+        }
+
+        function generateReports() {
+            const container = document.getElementById('reports-content');
+            
+            if (observations.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">No data available for reports. Complete some walkthroughs first!</p>';
+                return;
+            }
+
+            // Calculate summary statistics
+            const totalObs = observations.length;
+            const avgStudents = Math.round(observations.reduce((sum, obs) => sum + obs.studentCount, 0) / totalObs);
+            
+            const engagementStats = {
+                high: 0,
+                medium: 0,
+                low: 0
+            };
+            
+            observations.forEach(obs => {
+                obs.intervals.forEach(interval => {
+                    engagementStats[interval.engagement]++;
+                });
+            });
+
+            const totalIntervals = totalObs * 3;
+            
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="text-center p-4 bg-blue-50 rounded-lg">
+                        <div class="text-2xl font-bold text-blue-600">${totalObs}</div>
+                        <div class="text-sm text-gray-600">Total Observations</div>
+                    </div>
+                    <div class="text-center p-4 bg-green-50 rounded-lg">
+                        <div class="text-2xl font-bold text-green-600">${Math.round((engagementStats.high / totalIntervals) * 100)}%</div>
+                        <div class="text-sm text-gray-600">High Engagement</div>
+                    </div>
+                    <div class="text-center p-4 bg-purple-50 rounded-lg">
+                        <div class="text-2xl font-bold text-purple-600">${avgStudents}</div>
+                        <div class="text-sm text-gray-600">Avg Class Size</div>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <h4 class="font-semibold">Recent Observations Summary</h4>
+                    ${observations.slice(-10).reverse().map(obs => `
+                        <div class="border rounded p-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium">${obs.teacherName}</span>
+                                <span class="text-sm text-gray-500">${new Date(obs.date).toLocaleDateString()}</span>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                ${obs.gradeLevel} • ${obs.subjectArea} • ${obs.studentCount} students
+                            </div>
+                            <div class="mt-2">
+                                <span class="text-xs font-medium">Engagement: </span>
+                                ${obs.intervals.map(interval => `<span class="inline-block w-2 h-2 rounded-full ${getEngagementColor(interval.engagement)} mr-1"></span>`).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function exportData() {
+            if (observations.length === 0) {
+                alert('No data to export. Complete some walkthroughs first!');
+                return;
+            }
+
+            const csvContent = generateCSV();
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `walkthrough-data-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function generateCSV() {
+            const headers = [
+                'Date', 'Observer', 'Teacher', 'Grade', 'Subject', 'Students', 'Lesson Type',
+                'Interval 1 Student Engagement', 'Interval 1 Higher Order', 'Interval 1 Prompting', 'Interval 1 Standards', 'Interval 1 Checks', 'Interval 1 Release', 'Interval 1 Text', 'Interval 1 LPS', 'Interval 1 Co-teaching', 'Interval 1 Notes',
+                'Interval 2 Student Engagement', 'Interval 2 Higher Order', 'Interval 2 Prompting', 'Interval 2 Standards', 'Interval 2 Checks', 'Interval 2 Release', 'Interval 2 Text', 'Interval 2 LPS', 'Interval 2 Co-teaching', 'Interval 2 Notes',
+                'Interval 3 Student Engagement', 'Interval 3 Higher Order', 'Interval 3 Prompting', 'Interval 3 Standards', 'Interval 3 Checks', 'Interval 3 Release', 'Interval 3 Text', 'Interval 3 LPS', 'Interval 3 Co-teaching', 'Interval 3 Notes',
+                'Strengths', 'Growth Areas'
+            ];
+
+            const rows = observations.map(obs => [
+                obs.date,
+                obs.observerName,
+                obs.teacherName,
+                obs.gradeLevel,
+                obs.subjectArea,
+                obs.studentCount,
+                obs.lessonType,
+                obs.intervals[0].studentEngagement,
+                obs.intervals[0].higherOrder,
+                obs.intervals[0].prompting,
+                obs.intervals[0].standardsAligned,
+                obs.intervals[0].checksUnderstanding,
+                obs.intervals[0].releaseIndependence,
+                obs.intervals[0].respondingText,
+                obs.intervals[0].attentionLps,
+                obs.intervals[0].coTeaching,
+                `"${obs.intervals[0].notes || ''}"`,
+                obs.intervals[1].studentEngagement,
+                obs.intervals[1].higherOrder,
+                obs.intervals[1].prompting,
+                obs.intervals[1].standardsAligned,
+                obs.intervals[1].checksUnderstanding,
+                obs.intervals[1].releaseIndependence,
+                obs.intervals[1].respondingText,
+                obs.intervals[1].attentionLps,
+                obs.intervals[1].coTeaching,
+                `"${obs.intervals[1].notes || ''}"`,
+                obs.intervals[2].studentEngagement,
+                obs.intervals[2].higherOrder,
+                obs.intervals[2].prompting,
+                obs.intervals[2].standardsAligned,
+                obs.intervals[2].checksUnderstanding,
+                obs.intervals[2].releaseIndependence,
+                obs.intervals[2].respondingText,
+                obs.intervals[2].attentionLps,
+                obs.intervals[2].coTeaching,
+                `"${obs.intervals[2].notes || ''}"`,
+                `"${obs.strengths || ''}"`,
+                `"${obs.growthAreas || ''}"`
+            ]);
+
+            return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98741c9e73d71272',t:'MTc1OTIzOTQxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
