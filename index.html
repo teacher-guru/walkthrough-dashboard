@@ -6,6 +6,7 @@
     <title>The Partnership Instructional Walkthrough Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
             box-sizing: border-box;
@@ -117,6 +118,28 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         .hidden { display: none; }
+        .timer-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3B82F6;
+            text-align: center;
+            padding: 1rem;
+            background: #EFF6FF;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .timer-active {
+            color: #10B981;
+            background: #ECFDF5;
+        }
+        .timer-warning {
+            color: #F59E0B;
+            background: #FEF3C7;
+        }
+        .timer-complete {
+            color: #EF4444;
+            background: #FEE2E2;
+        }
     </style>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 </head>
@@ -174,16 +197,8 @@
                             <label for="grade-level" class="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
                             <select id="grade-level" class="form-input" required>
                                 <option value="">Select Grade</option>
-                                <option>Pre-K</option>
-                                <option>Kindergarten</option>
-                                <option>1st Grade</option>
-                                <option>2nd Grade</option>
-                                <option>3rd Grade</option>
-                                <option>4th Grade</option>
-                                <option>5th Grade</option>
                                 <option>6th Grade</option>
                                 <option>7th Grade</option>
-                                <option>8th Grade</option>
                             </select>
                         </div>
                         
@@ -198,6 +213,8 @@
                                 <option>Art</option>
                                 <option>Music</option>
                                 <option>Physical Education</option>
+                                <option>Technology</option>
+                                <option>Inclusion</option>
                                 <option>Special Education</option>
                                 <option>Other</option>
                             </select>
@@ -222,16 +239,24 @@
                         </div>
                     </div>
 
+                    <!-- Timer Display -->
+                    <div id="timer-container" class="hidden mb-6">
+                        <div class="timer-display" id="timer-display">5:00</div>
+                        <div class="text-center">
+                            <button type="button" id="stop-timer-btn" onclick="stopTimer()" class="btn btn-secondary">Stop Timer</button>
+                        </div>
+                    </div>
+
                     <!-- 5-Minute Intervals -->
                     <div class="mb-8">
                         <h3 class="text-lg font-semibold mb-4">Observation Intervals (Click to Add Each 5-Minute Interval)</h3>
-                        <p class="text-sm text-gray-600 mb-4">You must complete all 3 intervals before saving. Count actual students for each category.</p>
+                        <p class="text-sm text-gray-600 mb-4">You must complete all 3 intervals before saving. Count actual students for each category. Each interval will automatically time 5 minutes.</p>
                         
                         <!-- Interval Controls -->
                         <div class="flex gap-4 mb-6">
-                            <button type="button" id="add-interval-1" onclick="addInterval(1)" class="btn btn-primary">Add Interval 1 (0-5 min)</button>
-                            <button type="button" id="add-interval-2" onclick="addInterval(2)" class="btn btn-secondary" disabled>Add Interval 2 (5-10 min)</button>
-                            <button type="button" id="add-interval-3" onclick="addInterval(3)" class="btn btn-secondary" disabled>Add Interval 3 (10-15 min)</button>
+                            <button type="button" id="add-interval-1" onclick="addInterval(1)" class="btn btn-primary">Add Interval 1<br><span class="text-xs">(0-5 min)</span></button>
+                            <button type="button" id="add-interval-2" onclick="addInterval(2)" class="btn btn-secondary" disabled>Add Interval 2<br><span class="text-xs">(5-10 min)</span></button>
+                            <button type="button" id="add-interval-3" onclick="addInterval(3)" class="btn btn-secondary" disabled>Add Interval 3<br><span class="text-xs">(10-15 min)</span></button>
                         </div>
 
                         <!-- Interval 1 -->
@@ -613,12 +638,26 @@
                         <button type="button" onclick="resetForm()" class="btn btn-secondary">Reset Form</button>
                         <button type="submit" class="btn btn-green opacity-50" disabled>Save Walkthrough (Complete all 3 intervals first)</button>
                     </div>
+                    
+                    <!-- PDF Download Section (Hidden until form is submitted) -->
+                    <div id="pdf-download-section" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-medium text-green-800">📄 Teacher Feedback Report Ready</h4>
+                                <p class="text-sm text-green-700 mt-1">Individual teacher PDF report with all metrics and observations</p>
+                            </div>
+                            <button type="button" id="download-pdf-btn" onclick="downloadCurrentPDF()" class="btn btn-green">
+                                📥 Download PDF Report
+                            </button>
+                        </div>
+                    </div>
                 </form>
             </div>
 
             <!-- Weekly Progress Tracker -->
             <div class="card p-6 mb-8">
-                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Weekly Progress Tracker</h2>
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">📈 Weekly Progress Tracker</h2>
+                <p class="text-sm text-gray-600 mb-4">Track each observer's progress toward completing 12 observations per week. Progress bars show completion status.</p>
                 <div id="weekly-progress" class="mb-6">
                     <!-- Weekly progress will be populated here -->
                 </div>
@@ -629,57 +668,190 @@
 
             <!-- Recent Observations -->
             <div class="card p-6 mb-8">
-                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Recent Observations</h2>
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">📋 Recent Observations</h2>
                 <div id="recent-observations" class="space-y-4">
                     <!-- Sample data will be populated here -->
                 </div>
             </div>
 
-            <!-- Analytics Dashboard -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Student Engagement Trends</h3>
-                    <canvas id="engagementChart" width="400" height="200"></canvas>
+            <!-- Dashboard Summary & Quick Actions -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">📊 Dashboard Summary & Research-Based Calculations</h2>
+                
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-blue-600" id="total-observations">0</div>
+                        <div class="text-sm text-gray-600">Total Observations</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-green-600" id="avg-engagement">0%</div>
+                        <div class="text-sm text-gray-600">Avg Engagement</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-purple-600" id="teachers-observed">0</div>
+                        <div class="text-sm text-gray-600">Teachers Observed</div>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-orange-600" id="subjects-covered">0</div>
+                        <div class="text-sm text-gray-600">Subjects Covered</div>
+                    </div>
                 </div>
                 
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Higher Order Thinking Trends</h3>
-                    <canvas id="higherOrderChart" width="400" height="200"></canvas>
+                <!-- Research-Based Calculations -->
+                <div class="bg-blue-50 p-4 rounded-lg mb-6">
+                    <h4 class="font-medium text-blue-800 mb-2">📊 Research-Based Percentage Calculations:</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li>• <strong>Student Engagement:</strong> Engaged students ÷ Total students × 100</li>
+                            <li>• <strong>Higher Order Questions:</strong> Count ÷ 3 expected × 100 (optimal per 5-min)</li>
+                            <li>• <strong>Prompting & Follow-up:</strong> Count ÷ 5 expected × 100 (questioning research)</li>
+                            <li>• <strong>Checks for Understanding:</strong> Count ÷ 4 expected × 100 (Black & Wiliam)</li>
+                            <li>• <strong>Standards Aligned:</strong> Count ÷ 1 expected × 100 (clear connection)</li>
+                        </ul>
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li>• <strong>Release to Independence:</strong> Count ÷ 2 expected × 100 (Pearson & Gallagher)</li>
+                            <li>• <strong>Responding to Text:</strong> Count ÷ 3 expected × 100 (close reading research)</li>
+                            <li>• <strong>Attention to LPS:</strong> Count ÷ 2 expected × 100 (differentiation practice)</li>
+                            <li>• <strong>Co-teaching Support:</strong> Count ÷ 3 expected × 100 (Cook & Friend model)</li>
+                        </ul>
+                    </div>
+                    <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                        <p class="text-xs text-green-800"><strong>Performance Levels:</strong> 
+                        <span class="text-green-600">■</span> 80%+ Exceeds Expectations | 
+                        <span class="text-yellow-600">■</span> 50-79% Meets Expectations | 
+                        <span class="text-red-600">■</span> Below 50% Needs Growth</p>
+                    </div>
                 </div>
                 
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Standards Alignment Trends</h3>
-                    <canvas id="standardsChart" width="400" height="200"></canvas>
+                <!-- Key Insights -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-medium text-gray-800 mb-2">🔍 Key Dashboard Features:</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                        <ul class="space-y-1">
+                            <li>• <strong>Weekly Progress Monitor:</strong> Track observer completion toward 12 weekly goals</li>
+                            <li>• <strong>Teacher Multi-Metric Radar:</strong> Compare all 9 categories across teachers</li>
+                            <li>• <strong>Grade Level Analysis:</strong> Identify developmental differences between 6th/7th grade</li>
+                        </ul>
+                        <ul class="space-y-1">
+                            <li>• <strong>Subject Area Trends:</strong> Discover which subjects excel in different areas</li>
+                            <li>• <strong>Individual Teacher PDFs:</strong> Comprehensive feedback reports with all metrics</li>
+                            <li>• <strong>CSV Export:</strong> Complete data export for external analysis</li>
+                        </ul>
+                    </div>
                 </div>
-                
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Checks for Understanding Trends</h3>
-                    <canvas id="checksChart" width="400" height="200"></canvas>
+            </div>
+            
+            <!-- Teacher Multi-Metric Radar Chart -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">🎯 Multi-Metric Teacher Comparison (All 9 Categories)</h2>
+                <p class="text-sm text-gray-600 mb-4">Comprehensive radar chart comparing all teachers across all 9 instructional categories. Each teacher gets a unique color for easy comparison.</p>
+                <div class="h-96">
+                    <canvas id="teacherRadarChart" width="600" height="400"></canvas>
                 </div>
-                
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Prompting & Follow-up Trends</h3>
-                    <canvas id="promptingChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Grade Level Analysis -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">📊 Grade Level Analysis (6th vs 7th Grade)</h2>
+                <p class="text-sm text-gray-600 mb-4">Compare performance differences between 6th and 7th grade across all 9 categories</p>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Student Engagement by Grade</h3>
+                        <canvas id="gradeEngagementChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Higher Order Thinking by Grade</h3>
+                        <canvas id="gradeHigherOrderChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Prompting & Follow-up by Grade</h3>
+                        <canvas id="gradePromptingChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Standards Alignment by Grade</h3>
+                        <canvas id="gradeStandardsChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Checks for Understanding by Grade</h3>
+                        <canvas id="gradeChecksChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Release to Independence by Grade</h3>
+                        <canvas id="gradeReleaseChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Responding to Text by Grade</h3>
+                        <canvas id="gradeTextChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Attention to LPS Students by Grade</h3>
+                        <canvas id="gradeLpsChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Co-teaching Support by Grade</h3>
+                        <canvas id="gradeCoTeachingChart" width="400" height="200"></canvas>
+                    </div>
                 </div>
-                
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Release to Independence Trends</h3>
-                    <canvas id="releaseChart" width="400" height="200"></canvas>
-                </div>
-                
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Responding to Text Trends</h3>
-                    <canvas id="textChart" width="400" height="200"></canvas>
-                </div>
-                
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Attention to LPS Students Trends</h3>
-                    <canvas id="lpsChart" width="400" height="200"></canvas>
-                </div>
-                
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Co-teaching Support Trends</h3>
-                    <canvas id="coTeachingChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Subject Area Analysis -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">📚 Subject Area Analysis</h2>
+                <p class="text-sm text-gray-600 mb-4">Discover which subjects excel in different instructional categories across all 9 categories</p>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Student Engagement by Subject</h3>
+                        <canvas id="subjectEngagementChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Higher Order Thinking by Subject</h3>
+                        <canvas id="subjectHigherOrderChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Prompting & Follow-up by Subject</h3>
+                        <canvas id="subjectPromptingChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Standards Alignment by Subject</h3>
+                        <canvas id="subjectStandardsChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Checks for Understanding by Subject</h3>
+                        <canvas id="subjectChecksChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Release to Independence by Subject</h3>
+                        <canvas id="subjectReleaseChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Responding to Text by Subject</h3>
+                        <canvas id="subjectTextChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Attention to LPS Students by Subject</h3>
+                        <canvas id="subjectLpsChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card p-4">
+                        <h3 class="text-md font-semibold mb-2">Co-teaching Support by Subject</h3>
+                        <canvas id="subjectCoTeachingChart" width="400" height="200"></canvas>
+                    </div>
                 </div>
             </div>
         </main>
@@ -690,7 +862,7 @@
                 <div class="text-center">
                     <div class="text-green-500 text-4xl mb-4">✅</div>
                     <h3 class="text-lg font-semibold mb-2">Walkthrough Saved Successfully!</h3>
-                    <p class="text-gray-600 mb-4">Your observation has been recorded and added to the database.</p>
+                    <p class="text-gray-600 mb-4">Your observation has been recorded and the teacher feedback PDF has been downloaded.</p>
                     <button onclick="closeModal()" class="btn btn-primary">Continue</button>
                 </div>
             </div>
@@ -715,6 +887,9 @@
         let observations = JSON.parse(localStorage.getItem('walkthroughObservations')) || [];
         let currentInterval = 1;
         let completedIntervals = [];
+        let timerInterval = null;
+        let timeRemaining = 300; // 5 minutes in seconds
+        let currentTimerInterval = 0;
         const REQUIRED_WEEKLY_OBSERVATIONS = 12;
 
         // Initialize the application
@@ -731,16 +906,186 @@
             // Load weekly progress
             loadWeeklyProgress();
             
-            // Generate dropdown options
-            generateDropdownOptions();
+            // Generate sample data if none exists
+            if (observations.length === 0) {
+                generateSampleData();
+            }
         });
 
-        function generateDropdownOptions() {
-            // This function is called during initialization to populate dropdowns
-            // The dropdown options are already generated in the HTML template
+        function generateSampleData() {
+            const sampleObservations = [
+                {
+                    id: 1,
+                    timestamp: new Date(Date.now() - 86400000).toISOString(),
+                    observerName: 'Principal J. Yeager',
+                    teacherName: 'Sarah Johnson',
+                    date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+                    startTime: '09:15',
+                    gradeLevel: '6th Grade',
+                    subjectArea: 'Mathematics',
+                    studentCount: 24,
+                    lessonType: 'Whole Group Instruction',
+                    intervals: [
+                        {
+                            studentEngagement: 20,
+                            higherOrder: 2,
+                            prompting: 4,
+                            standardsAligned: 1,
+                            checksUnderstanding: 3,
+                            releaseIndependence: 2,
+                            respondingText: 2,
+                            attentionLps: 1,
+                            coTeaching: 2,
+                            notes: 'Strong student participation in problem-solving activities.',
+                            percentages: { studentEngagement: 83, higherOrder: 67, prompting: 80, standardsAligned: 100, checksUnderstanding: 75, releaseIndependence: 100, respondingText: 67, attentionLps: 50, coTeaching: 67 }
+                        },
+                        {
+                            studentEngagement: 22,
+                            higherOrder: 3,
+                            prompting: 5,
+                            standardsAligned: 1,
+                            checksUnderstanding: 4,
+                            releaseIndependence: 2,
+                            respondingText: 3,
+                            attentionLps: 2,
+                            coTeaching: 3,
+                            notes: 'Excellent use of manipulatives and visual aids.',
+                            percentages: { studentEngagement: 92, higherOrder: 100, prompting: 100, standardsAligned: 100, checksUnderstanding: 100, releaseIndependence: 100, respondingText: 100, attentionLps: 100, coTeaching: 100 }
+                        },
+                        {
+                            studentEngagement: 21,
+                            higherOrder: 2,
+                            prompting: 3,
+                            standardsAligned: 1,
+                            checksUnderstanding: 3,
+                            releaseIndependence: 1,
+                            respondingText: 2,
+                            attentionLps: 1,
+                            coTeaching: 2,
+                            notes: 'Students working independently on practice problems.',
+                            percentages: { studentEngagement: 88, higherOrder: 67, prompting: 60, standardsAligned: 100, checksUnderstanding: 75, releaseIndependence: 50, respondingText: 67, attentionLps: 50, coTeaching: 67 }
+                        }
+                    ],
+                    strengths: 'Excellent classroom management and student engagement. Clear learning objectives.',
+                    growthAreas: 'Consider incorporating more higher-order thinking questions in the final interval.',
+                    weekOf: getWeekOf(new Date(Date.now() - 86400000))
+                },
+                {
+                    id: 2,
+                    timestamp: new Date(Date.now() - 172800000).toISOString(),
+                    observerName: 'Assistant Principal C. Jordan',
+                    teacherName: 'Michael Chen',
+                    date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
+                    startTime: '10:30',
+                    gradeLevel: '7th Grade',
+                    subjectArea: 'English Language Arts',
+                    studentCount: 26,
+                    lessonType: 'Small Group Work',
+                    intervals: [
+                        {
+                            studentEngagement: 23,
+                            higherOrder: 3,
+                            prompting: 4,
+                            standardsAligned: 1,
+                            checksUnderstanding: 4,
+                            releaseIndependence: 2,
+                            respondingText: 4,
+                            attentionLps: 2,
+                            coTeaching: 3,
+                            notes: 'Students engaged in literature circles with rich discussions.',
+                            percentages: { studentEngagement: 88, higherOrder: 100, prompting: 80, standardsAligned: 100, checksUnderstanding: 100, releaseIndependence: 100, respondingText: 133, attentionLps: 100, coTeaching: 100 }
+                        },
+                        {
+                            studentEngagement: 25,
+                            higherOrder: 4,
+                            prompting: 6,
+                            standardsAligned: 1,
+                            checksUnderstanding: 5,
+                            releaseIndependence: 3,
+                            respondingText: 5,
+                            attentionLps: 2,
+                            coTeaching: 4,
+                            notes: 'Excellent text-based discussions and evidence citing.',
+                            percentages: { studentEngagement: 96, higherOrder: 133, prompting: 120, standardsAligned: 100, checksUnderstanding: 125, releaseIndependence: 150, respondingText: 167, attentionLps: 100, coTeaching: 133 }
+                        },
+                        {
+                            studentEngagement: 24,
+                            higherOrder: 3,
+                            prompting: 5,
+                            standardsAligned: 1,
+                            checksUnderstanding: 4,
+                            releaseIndependence: 2,
+                            respondingText: 4,
+                            attentionLps: 1,
+                            coTeaching: 3,
+                            notes: 'Students presenting findings to class with confidence.',
+                            percentages: { studentEngagement: 92, higherOrder: 100, prompting: 100, standardsAligned: 100, checksUnderstanding: 100, releaseIndependence: 100, respondingText: 133, attentionLps: 50, coTeaching: 100 }
+                        }
+                    ],
+                    strengths: 'Outstanding use of collaborative learning and text-based evidence.',
+                    growthAreas: 'Continue to monitor and support struggling readers during group work.',
+                    weekOf: getWeekOf(new Date(Date.now() - 172800000))
+                }
+            ];
+
+            observations = sampleObservations;
+            localStorage.setItem('walkthroughObservations', JSON.stringify(observations));
+            loadRecentObservations();
+            updateCharts();
+            loadWeeklyProgress();
+        }
+
+        function startTimer(intervalNum) {
+            currentTimerInterval = intervalNum;
+            timeRemaining = 300; // Reset to 5 minutes
+            
+            // Show timer
+            document.getElementById('timer-container').classList.remove('hidden');
+            updateTimerDisplay();
+            
+            // Start countdown
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+                
+                if (timeRemaining <= 0) {
+                    stopTimer();
+                    alert(`Interval ${intervalNum} complete! Time to move to the next interval.`);
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            document.getElementById('timer-container').classList.add('hidden');
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            const timerElement = document.getElementById('timer-display');
+            timerElement.textContent = display;
+            
+            // Update timer styling based on time remaining
+            timerElement.className = 'timer-display';
+            if (timeRemaining <= 0) {
+                timerElement.classList.add('timer-complete');
+            } else if (timeRemaining <= 60) {
+                timerElement.classList.add('timer-warning');
+            } else {
+                timerElement.classList.add('timer-active');
+            }
         }
 
         function addInterval(intervalNum) {
+            // Start the timer for this interval
+            startTimer(intervalNum);
+            
             // Show the interval section
             document.getElementById(`interval-${intervalNum}`).classList.remove('hidden');
             
@@ -763,7 +1108,7 @@
             document.getElementById(`add-interval-${intervalNum}`).disabled = true;
             document.getElementById(`add-interval-${intervalNum}`).classList.remove('btn-primary');
             document.getElementById(`add-interval-${intervalNum}`).classList.add('btn-secondary');
-            document.getElementById(`add-interval-${intervalNum}`).textContent = `✓ Interval ${intervalNum} Added`;
+            document.getElementById(`add-interval-${intervalNum}`).innerHTML = `✓ Interval ${intervalNum} Added<br><span class="text-xs">(${(intervalNum-1)*5}-${intervalNum*5} min)</span>`;
         }
 
         function updateIntervalButtons() {
@@ -772,17 +1117,39 @@
             if (completedIntervals.length === 3) {
                 saveButton.disabled = false;
                 saveButton.classList.remove('opacity-50');
+                saveButton.textContent = 'Save Walkthrough';
             } else {
                 saveButton.disabled = true;
                 saveButton.classList.add('opacity-50');
+                saveButton.textContent = 'Save Walkthrough (Complete all 3 intervals first)';
             }
         }
+
+        // Research-based expected counts per 5-minute interval
+        const EXPECTED_COUNTS = {
+            'student-engagement': 'students', // Uses student count as denominator
+            'higher-order': 3,        // 3 higher-order questions per 5 min (Bloom's Taxonomy research)
+            'prompting': 5,           // 5 follow-up prompts per 5 min (questioning research)
+            'standards-aligned': 1,   // 1 clear standards connection per 5 min
+            'checks-understanding': 4, // 4 formative checks per 5 min (Black & Wiliam research)
+            'release-independence': 2, // 2 gradual release moves per 5 min (Pearson & Gallagher)
+            'responding-text': 3,     // 3 text-based responses per 5 min (close reading research)
+            'attention-lps': 2,       // 2 specific LPS interactions per 5 min
+            'co-teaching': 3          // 3 co-teaching interactions per 5 min (Cook & Friend research)
+        };
 
         function updatePercentages(intervalNum) {
             const totalStudents = parseInt(document.getElementById('student-count').value) || 0;
             
             if (totalStudents === 0) {
-                alert('Please enter the total number of students first.');
+                // Don't show alert every time, just show 0%
+                const categories = ['student-engagement', 'higher-order', 'prompting', 'standards-aligned', 'checks-understanding', 'release-independence', 'responding-text', 'attention-lps', 'co-teaching'];
+                categories.forEach(category => {
+                    const percentSpan = document.getElementById(`${category}-percent-${intervalNum}`);
+                    if (percentSpan) {
+                        percentSpan.textContent = '0%';
+                    }
+                });
                 return;
             }
             
@@ -794,14 +1161,212 @@
                 
                 if (input && percentSpan) {
                     const count = parseInt(input.value) || 0;
-                    const percentage = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+                    let percentage;
+                    
+                    if (category === 'student-engagement') {
+                        // Student engagement uses student count as denominator
+                        if (count > totalStudents) {
+                            input.value = totalStudents;
+                            alert(`Count cannot exceed total number of students (${totalStudents})`);
+                            return;
+                        }
+                        percentage = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+                    } else {
+                        // Other categories use research-based expected counts
+                        const expectedCount = EXPECTED_COUNTS[category];
+                        percentage = Math.round((count / expectedCount) * 100);
+                        
+                        // Cap at 200% to show when exceeding expectations significantly
+                        percentage = Math.min(percentage, 200);
+                    }
+                    
                     percentSpan.textContent = `${percentage}%`;
+                    
+                    // Add color coding for performance levels
+                    percentSpan.className = 'text-sm mt-1';
+                    if (category === 'student-engagement') {
+                        if (percentage >= 80) percentSpan.classList.add('text-green-600', 'font-medium');
+                        else if (percentage >= 60) percentSpan.classList.add('text-yellow-600');
+                        else percentSpan.classList.add('text-red-600');
+                    } else {
+                        if (percentage >= 80) percentSpan.classList.add('text-green-600', 'font-medium');
+                        else if (percentage >= 50) percentSpan.classList.add('text-yellow-600');
+                        else percentSpan.classList.add('text-red-600');
+                    }
                 }
             });
         }
 
+        function generateTeacherFeedbackPDF(observation) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.text('Partnership Instructional Walkthrough', 20, 20);
+            doc.text('Individual Teacher Feedback Report', 20, 30);
+            
+            // Basic Information
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Teacher: ${observation.teacherName}`, 20, 50);
+            doc.text(`Observer: ${observation.observerName}`, 20, 60);
+            doc.text(`Date: ${new Date(observation.date).toLocaleDateString()}`, 20, 70);
+            doc.text(`Time: ${observation.startTime}`, 120, 70);
+            doc.text(`Grade: ${observation.gradeLevel}`, 20, 80);
+            doc.text(`Subject: ${observation.subjectArea}`, 120, 80);
+            doc.text(`Students: ${observation.studentCount}`, 20, 90);
+            doc.text(`Lesson Type: ${observation.lessonType}`, 120, 90);
+            
+            // Performance Summary
+            doc.setFont(undefined, 'bold');
+            doc.text('Performance Summary:', 20, 110);
+            
+            let yPos = 125;
+            
+            // Calculate overall averages for this teacher
+            const avgEngagement = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.studentEngagement || 0), 0) / 3);
+            const avgHigherOrder = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.higherOrder || 0), 0) / 3);
+            const avgStandards = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.standardsAligned || 0), 0) / 3);
+            const avgChecks = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.checksUnderstanding || 0), 0) / 3);
+            const avgPrompting = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.prompting || 0), 0) / 3);
+            const avgRelease = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.releaseIndependence || 0), 0) / 3);
+            const avgText = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.respondingText || 0), 0) / 3);
+            const avgLps = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.attentionLps || 0), 0) / 3);
+            const avgCoTeaching = Math.round(observation.intervals.reduce((sum, interval) => sum + (interval.percentages.coTeaching || 0), 0) / 3);
+            
+            doc.setFont(undefined, 'normal');
+            doc.text(`Overall Student Engagement: ${avgEngagement}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Higher Order Thinking Questions: ${avgHigherOrder}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Prompting & Follow-up: ${avgPrompting}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Standards Alignment: ${avgStandards}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Checks for Understanding: ${avgChecks}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Release to Independence: ${avgRelease}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Responding to Text: ${avgText}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Attention to LPS Students: ${avgLps}%`, 25, yPos);
+            yPos += 8;
+            doc.text(`Co-teaching Support: ${avgCoTeaching}%`, 25, yPos);
+            yPos += 15;
+            
+            // Interval Details
+            doc.setFont(undefined, 'bold');
+            doc.text('Detailed Interval Data:', 20, yPos);
+            yPos += 15;
+            
+            observation.intervals.forEach((interval, index) => {
+                if (yPos > 240) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                
+                doc.setFont(undefined, 'bold');
+                doc.text(`Interval ${index + 1} (Minutes ${index * 5}-${(index + 1) * 5}):`, 20, yPos);
+                yPos += 10;
+                
+                doc.setFont(undefined, 'normal');
+                doc.text(`• Student Engagement: ${interval.percentages.studentEngagement || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Higher Order Thinking: ${interval.percentages.higherOrder || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Prompting & Follow-up: ${interval.percentages.prompting || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Standards Aligned: ${interval.percentages.standardsAligned || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Checks for Understanding: ${interval.percentages.checksUnderstanding || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Release to Independence: ${interval.percentages.releaseIndependence || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Responding to Text: ${interval.percentages.respondingText || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Attention to LPS: ${interval.percentages.attentionLps || 0}%`, 25, yPos);
+                yPos += 6;
+                doc.text(`• Co-teaching Support: ${interval.percentages.coTeaching || 0}%`, 25, yPos);
+                yPos += 8;
+                
+                if (interval.notes) {
+                    const notesLines = doc.splitTextToSize(`Notes: ${interval.notes}`, 170);
+                    doc.text(notesLines, 25, yPos);
+                    yPos += notesLines.length * 6 + 8;
+                }
+                yPos += 5;
+            });
+            
+            // Overall Assessment
+            if (yPos > 200) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Overall Assessment:', 20, yPos);
+            yPos += 15;
+            
+            if (observation.strengths) {
+                doc.setFont(undefined, 'bold');
+                doc.text('Strengths Observed:', 20, yPos);
+                yPos += 10;
+                doc.setFont(undefined, 'normal');
+                const strengthsLines = doc.splitTextToSize(observation.strengths, 170);
+                doc.text(strengthsLines, 20, yPos);
+                yPos += strengthsLines.length * 6 + 10;
+            }
+            
+            if (observation.growthAreas) {
+                if (yPos > 220) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                doc.setFont(undefined, 'bold');
+                doc.text('Areas for Growth:', 20, yPos);
+                yPos += 10;
+                doc.setFont(undefined, 'normal');
+                const growthLines = doc.splitTextToSize(observation.growthAreas, 170);
+                doc.text(growthLines, 20, yPos);
+                yPos += growthLines.length * 6 + 10;
+            }
+            
+            // Performance Indicators
+            if (yPos > 200) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Performance Indicators:', 20, yPos);
+            yPos += 10;
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            doc.text('• 80%+ = Exceeds Expectations (Research-based best practices)', 20, yPos);
+            yPos += 6;
+            doc.text('• 50-79% = Meets Expectations (Solid instructional practices)', 20, yPos);
+            yPos += 6;
+            doc.text('• Below 50% = Needs Growth (Opportunities for development)', 20, yPos);
+            yPos += 10;
+            
+            // Footer
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'italic');
+            const footerY = doc.internal.pageSize.height - 20;
+            doc.text('This walkthrough is non-evaluative and designed to support professional growth.', 20, footerY);
+            
+            // Save the PDF
+            const fileName = `Walkthrough_${observation.teacherName.replace(/\s+/g, '_')}_${observation.date}.pdf`;
+            doc.save(fileName);
+        }
+
         function handleFormSubmit(event) {
             event.preventDefault();
+            
+            // Stop any running timer
+            stopTimer();
             
             // Check if all intervals are completed
             if (completedIntervals.length !== 3) {
@@ -809,8 +1374,26 @@
                 return;
             }
             
+            // Validate required fields
+            const requiredFields = ['observer-name', 'teacher-name', 'observation-date', 'start-time', 'grade-level', 'subject-area', 'student-count', 'lesson-type'];
+            for (let fieldId of requiredFields) {
+                const field = document.getElementById(fieldId);
+                if (!field.value.trim()) {
+                    alert(`Please fill in the ${field.previousElementSibling.textContent} field.`);
+                    field.focus();
+                    return;
+                }
+            }
+            
             const formData = new FormData(event.target);
             const totalStudents = parseInt(document.getElementById('student-count').value);
+            
+            // Validate student count
+            if (totalStudents < 1 || totalStudents > 50) {
+                alert('Please enter a valid number of students (1-50).');
+                document.getElementById('student-count').focus();
+                return;
+            }
             
             const observation = {
                 id: Date.now(),
@@ -869,12 +1452,18 @@
                 weekOf: getWeekOf(new Date(document.getElementById('observation-date').value))
             };
 
-            // Save to localStorage
+            // Save to localStorage first
             observations.push(observation);
             localStorage.setItem('walkthroughObservations', JSON.stringify(observations));
+            
+            // Store current observation for PDF download
+            window.currentObservation = observation;
 
-            // Show success modal
-            document.getElementById('success-modal').classList.remove('hidden');
+            // Show PDF download section instead of auto-downloading
+            document.getElementById('pdf-download-section').classList.remove('hidden');
+            
+            // Scroll to PDF section
+            document.getElementById('pdf-download-section').scrollIntoView({ behavior: 'smooth' });
 
             // Refresh displays
             loadRecentObservations();
@@ -889,8 +1478,20 @@
             categories.forEach(category => {
                 const input = document.querySelector(`input[name="${category}-${intervalNum}"]`);
                 const count = parseInt(input.value) || 0;
+                let percentage;
+                
+                if (category === 'student-engagement') {
+                    // Student engagement uses student count as denominator
+                    percentage = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+                } else {
+                    // Other categories use research-based expected counts
+                    const expectedCount = EXPECTED_COUNTS[category];
+                    percentage = Math.round((count / expectedCount) * 100);
+                    percentage = Math.min(percentage, 200); // Cap at 200%
+                }
+                
                 const key = category.replace(/-/g, '').replace('studentengagement', 'studentEngagement').replace('higherorder', 'higherOrder').replace('standardsaligned', 'standardsAligned').replace('checksunderstanding', 'checksUnderstanding').replace('releaseindependence', 'releaseIndependence').replace('respondingtext', 'respondingText').replace('attentionlps', 'attentionLps').replace('coteaching', 'coTeaching');
-                percentages[key] = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+                percentages[key] = percentage;
             });
             
             return percentages;
@@ -905,34 +1506,39 @@
         }
 
         function resetForm() {
+            // Stop any running timer
+            stopTimer();
+            
             document.getElementById('walkthrough-form').reset();
             document.getElementById('observation-date').value = new Date().toISOString().split('T')[0];
             
             // Reset interval tracking
             completedIntervals = [];
             
-            // Hide all intervals
+            // Hide all intervals and PDF section
             for (let i = 1; i <= 3; i++) {
                 document.getElementById(`interval-${i}`).classList.add('hidden');
             }
+            document.getElementById('pdf-download-section').classList.add('hidden');
             
             // Reset buttons
             document.getElementById('add-interval-1').disabled = false;
             document.getElementById('add-interval-1').classList.remove('btn-secondary');
             document.getElementById('add-interval-1').classList.add('btn-primary');
-            document.getElementById('add-interval-1').textContent = 'Add Interval 1 (0-5 min)';
+            document.getElementById('add-interval-1').innerHTML = 'Add Interval 1<br><span class="text-xs">(0-5 min)</span>';
             
             for (let i = 2; i <= 3; i++) {
                 document.getElementById(`add-interval-${i}`).disabled = true;
                 document.getElementById(`add-interval-${i}`).classList.remove('btn-primary');
                 document.getElementById(`add-interval-${i}`).classList.add('btn-secondary');
-                document.getElementById(`add-interval-${i}`).textContent = `Add Interval ${i} (${(i-1)*5}-${i*5} min)`;
+                document.getElementById(`add-interval-${i}`).innerHTML = `Add Interval ${i}<br><span class="text-xs">(${(i-1)*5}-${i*5} min)</span>`;
             }
             
             // Disable save button
             const saveButton = document.querySelector('button[type="submit"]');
             saveButton.disabled = true;
             saveButton.classList.add('opacity-50');
+            saveButton.textContent = 'Save Walkthrough (Complete all 3 intervals first)';
         }
 
         function loadWeeklyProgress() {
@@ -1124,6 +1730,16 @@
             };
         }
 
+        function downloadCurrentPDF() {
+            if (window.currentObservation) {
+                generateTeacherFeedbackPDF(window.currentObservation);
+                
+                // Hide the PDF section and show success message
+                document.getElementById('pdf-download-section').classList.add('hidden');
+                document.getElementById('success-modal').classList.remove('hidden');
+            }
+        }
+
         function closeModal() {
             document.getElementById('success-modal').classList.add('hidden');
             resetForm();
@@ -1135,6 +1751,7 @@
 
             if (recentObs.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-8">No observations recorded yet. Complete your first walkthrough above!</p>';
+                updateDashboardStats();
                 return;
             }
 
@@ -1164,6 +1781,37 @@
                     </div>
                 </div>
             `).join('');
+            
+            updateDashboardStats();
+        }
+        
+        function updateDashboardStats() {
+            // Update total observations
+            document.getElementById('total-observations').textContent = observations.length;
+            
+            // Calculate average engagement
+            if (observations.length > 0) {
+                let totalEngagement = 0;
+                let totalIntervals = 0;
+                observations.forEach(obs => {
+                    obs.intervals.forEach(interval => {
+                        totalEngagement += interval.percentages.studentEngagement || 0;
+                        totalIntervals++;
+                    });
+                });
+                const avgEngagement = Math.round(totalEngagement / totalIntervals);
+                document.getElementById('avg-engagement').textContent = avgEngagement + '%';
+            } else {
+                document.getElementById('avg-engagement').textContent = '0%';
+            }
+            
+            // Count unique teachers
+            const uniqueTeachers = new Set(observations.map(obs => obs.teacherName));
+            document.getElementById('teachers-observed').textContent = uniqueTeachers.size;
+            
+            // Count unique subjects
+            const uniqueSubjects = new Set(observations.map(obs => obs.subjectArea));
+            document.getElementById('subjects-covered').textContent = uniqueSubjects.size;
         }
 
         function calculateAvgEngagement(intervals) {
@@ -1171,52 +1819,77 @@
             return Math.round(total / intervals.length);
         }
 
-        function getEffectivenessColor(effectiveness) {
-            const colors = {
-                'excellent': 'bg-green-100 text-green-800',
-                'good': 'bg-blue-100 text-blue-800',
-                'satisfactory': 'bg-yellow-100 text-yellow-800',
-                'needs-improvement': 'bg-red-100 text-red-800'
-            };
-            return colors[effectiveness] || 'bg-gray-100 text-gray-800';
-        }
-
-        function getEngagementColor(engagement) {
-            const colors = {
-                'high': 'bg-green-500',
-                'medium': 'bg-yellow-500',
-                'low': 'bg-red-500'
-            };
-            return colors[engagement] || 'bg-gray-300';
-        }
-
         function initializeCharts() {
-            const chartConfigs = [
-                { id: 'engagementChart', label: 'Student Engagement %', color: '#10B981' },
-                { id: 'higherOrderChart', label: 'Higher Order Thinking %', color: '#3B82F6' },
-                { id: 'standardsChart', label: 'Standards Aligned %', color: '#F59E0B' },
-                { id: 'checksChart', label: 'Checks for Understanding %', color: '#EF4444' },
-                { id: 'promptingChart', label: 'Prompting & Follow-up %', color: '#8B5CF6' },
-                { id: 'releaseChart', label: 'Release to Independence %', color: '#06B6D4' },
-                { id: 'textChart', label: 'Responding to Text %', color: '#EC4899' },
-                { id: 'lpsChart', label: 'Attention to LPS Students %', color: '#84CC16' },
-                { id: 'coTeachingChart', label: 'Co-teaching Support %', color: '#F97316' }
+            // Grade Level Analysis Charts (9 charts)
+            const gradeChartConfigs = [
+                { id: 'gradeEngagementChart', label: 'Student Engagement %', color: '#10B981' },
+                { id: 'gradeHigherOrderChart', label: 'Higher Order Thinking %', color: '#3B82F6' },
+                { id: 'gradePromptingChart', label: 'Prompting & Follow-up %', color: '#8B5CF6' },
+                { id: 'gradeStandardsChart', label: 'Standards Aligned %', color: '#F59E0B' },
+                { id: 'gradeChecksChart', label: 'Checks for Understanding %', color: '#EF4444' },
+                { id: 'gradeReleaseChart', label: 'Release to Independence %', color: '#06B6D4' },
+                { id: 'gradeTextChart', label: 'Responding to Text %', color: '#EC4899' },
+                { id: 'gradeLpsChart', label: 'Attention to LPS Students %', color: '#84CC16' },
+                { id: 'gradeCoTeachingChart', label: 'Co-teaching Support %', color: '#F97316' }
+            ];
+            
+            // Subject Area Analysis Charts (9 charts)
+            const subjectChartConfigs = [
+                { id: 'subjectEngagementChart', label: 'Student Engagement %', color: '#10B981' },
+                { id: 'subjectHigherOrderChart', label: 'Higher Order Thinking %', color: '#3B82F6' },
+                { id: 'subjectPromptingChart', label: 'Prompting & Follow-up %', color: '#8B5CF6' },
+                { id: 'subjectStandardsChart', label: 'Standards Aligned %', color: '#F59E0B' },
+                { id: 'subjectChecksChart', label: 'Checks for Understanding %', color: '#EF4444' },
+                { id: 'subjectReleaseChart', label: 'Release to Independence %', color: '#06B6D4' },
+                { id: 'subjectTextChart', label: 'Responding to Text %', color: '#EC4899' },
+                { id: 'subjectLpsChart', label: 'Attention to LPS Students %', color: '#84CC16' },
+                { id: 'subjectCoTeachingChart', label: 'Co-teaching Support %', color: '#F97316' }
             ];
 
-            // Create all trend charts
-            chartConfigs.forEach(config => {
+            // Create Teacher Multi-Metric Radar Chart
+            const teacherRadarCtx = document.getElementById('teacherRadarChart').getContext('2d');
+            window.teacherRadarChart = new Chart(teacherRadarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Engagement', 'Higher Order', 'Prompting', 'Standards', 'Checks', 'Release', 'Text Response', 'LPS Attention', 'Co-teaching'],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+
+            // Create Grade Level Analysis Charts
+            gradeChartConfigs.forEach(config => {
                 const ctx = document.getElementById(config.id).getContext('2d');
                 window[config.id.replace('Chart', '') + 'Chart'] = new Chart(ctx, {
-                    type: 'line',
+                    type: 'bar',
                     data: {
-                        labels: [],
+                        labels: ['6th Grade', '7th Grade'],
                         datasets: [{
                             label: config.label,
                             data: [],
                             borderColor: config.color,
-                            backgroundColor: config.color + '20',
-                            tension: 0.4,
-                            fill: true
+                            backgroundColor: config.color + '80',
+                            borderWidth: 1
                         }]
                     },
                     options: {
@@ -1234,15 +1907,50 @@
                         },
                         plugins: {
                             legend: {
-                                display: true,
-                                position: 'top'
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.parsed.y + '%';
+                                display: false
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Create Subject Area Analysis Charts
+            subjectChartConfigs.forEach(config => {
+                const ctx = document.getElementById(config.id).getContext('2d');
+                window[config.id.replace('Chart', '') + 'Chart'] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: config.label,
+                            data: [],
+                            borderColor: config.color,
+                            backgroundColor: config.color + '80',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
                                     }
                                 }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
                             }
                         }
                     }
@@ -1254,199 +1962,156 @@
 
         function updateCharts() {
             if (observations.length === 0) return;
-
-            // Get last 10 observations for trend analysis
-            const last10Obs = observations.slice(-10);
-            const labels = last10Obs.map((obs, index) => {
-                const date = new Date(obs.date);
-                return `${date.getMonth() + 1}/${date.getDate()} ${obs.teacherName.split(' ')[0]}`;
-            });
-
-            // Calculate average percentages for each category across all intervals
-            const categoryData = {
-                engagement: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'studentEngagement')),
-                higherOrder: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'higherOrder')),
-                standards: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'standardsAligned')),
-                checks: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'checksUnderstanding')),
-                prompting: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'prompting')),
-                release: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'releaseIndependence')),
-                text: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'respondingText')),
-                lps: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'attentionLps')),
-                coTeaching: last10Obs.map(obs => calculateCategoryAverage(obs.intervals, 'coTeaching'))
-            };
-
-            // Update all charts
-            const chartMappings = [
-                { chart: window.engagementChart, data: categoryData.engagement },
-                { chart: window.higherOrderChart, data: categoryData.higherOrder },
-                { chart: window.standardsChart, data: categoryData.standards },
-                { chart: window.checksChart, data: categoryData.checks },
-                { chart: window.promptingChart, data: categoryData.prompting },
-                { chart: window.releaseChart, data: categoryData.release },
-                { chart: window.textChart, data: categoryData.text },
-                { chart: window.lpsChart, data: categoryData.lps },
-                { chart: window.coTeachingChart, data: categoryData.coTeaching }
-            ];
-
-            chartMappings.forEach(mapping => {
-                if (mapping.chart) {
-                    mapping.chart.data.labels = labels;
-                    mapping.chart.data.datasets[0].data = mapping.data;
-                    mapping.chart.update();
+            
+            updateTeacherRadarChart();
+            updateGradeLevelCharts();
+            updateSubjectAreaCharts();
+        }
+        
+        function updateTeacherRadarChart() {
+            if (!window.teacherRadarChart) return;
+            
+            const teacherData = {};
+            observations.forEach(obs => {
+                if (!teacherData[obs.teacherName]) {
+                    teacherData[obs.teacherName] = {
+                        studentEngagement: [],
+                        higherOrder: [],
+                        prompting: [],
+                        standardsAligned: [],
+                        checksUnderstanding: [],
+                        releaseIndependence: [],
+                        respondingText: [],
+                        attentionLps: [],
+                        coTeaching: []
+                    };
                 }
+                
+                obs.intervals.forEach(interval => {
+                    teacherData[obs.teacherName].studentEngagement.push(interval.percentages.studentEngagement || 0);
+                    teacherData[obs.teacherName].higherOrder.push(interval.percentages.higherOrder || 0);
+                    teacherData[obs.teacherName].prompting.push(interval.percentages.prompting || 0);
+                    teacherData[obs.teacherName].standardsAligned.push(interval.percentages.standardsAligned || 0);
+                    teacherData[obs.teacherName].checksUnderstanding.push(interval.percentages.checksUnderstanding || 0);
+                    teacherData[obs.teacherName].releaseIndependence.push(interval.percentages.releaseIndependence || 0);
+                    teacherData[obs.teacherName].respondingText.push(interval.percentages.respondingText || 0);
+                    teacherData[obs.teacherName].attentionLps.push(interval.percentages.attentionLps || 0);
+                    teacherData[obs.teacherName].coTeaching.push(interval.percentages.coTeaching || 0);
+                });
             });
-        }
-
-        function calculateCategoryAverage(intervals, category) {
-            const total = intervals.reduce((sum, interval) => {
-                return sum + (interval.percentages[category] || 0);
-            }, 0);
-            return Math.round(total / intervals.length);
-        }
-
-        function showReports() {
-            document.getElementById('reports-modal').classList.remove('hidden');
-            generateReports();
-        }
-
-        function closeReportsModal() {
-            document.getElementById('reports-modal').classList.add('hidden');
-        }
-
-        function generateReports() {
-            const container = document.getElementById('reports-content');
             
-            if (observations.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-8">No data available for reports. Complete some walkthroughs first!</p>';
-                return;
-            }
-
-            // Calculate summary statistics
-            const totalObs = observations.length;
-            const avgStudents = Math.round(observations.reduce((sum, obs) => sum + obs.studentCount, 0) / totalObs);
+            const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0'];
+            const datasets = [];
             
-            const engagementStats = {
-                high: 0,
-                medium: 0,
-                low: 0
+            Object.keys(teacherData).forEach((teacher, index) => {
+                const data = teacherData[teacher];
+                const avgData = [
+                    Math.round(data.studentEngagement.reduce((a, b) => a + b, 0) / data.studentEngagement.length),
+                    Math.round(data.higherOrder.reduce((a, b) => a + b, 0) / data.higherOrder.length),
+                    Math.round(data.prompting.reduce((a, b) => a + b, 0) / data.prompting.length),
+                    Math.round(data.standardsAligned.reduce((a, b) => a + b, 0) / data.standardsAligned.length),
+                    Math.round(data.checksUnderstanding.reduce((a, b) => a + b, 0) / data.checksUnderstanding.length),
+                    Math.round(data.releaseIndependence.reduce((a, b) => a + b, 0) / data.releaseIndependence.length),
+                    Math.round(data.respondingText.reduce((a, b) => a + b, 0) / data.respondingText.length),
+                    Math.round(data.attentionLps.reduce((a, b) => a + b, 0) / data.attentionLps.length),
+                    Math.round(data.coTeaching.reduce((a, b) => a + b, 0) / data.coTeaching.length)
+                ];
+                
+                datasets.push({
+                    label: teacher,
+                    data: avgData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '20',
+                    pointBackgroundColor: colors[index % colors.length],
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: colors[index % colors.length]
+                });
+            });
+            
+            window.teacherRadarChart.data.datasets = datasets;
+            window.teacherRadarChart.update();
+        }
+
+        function updateGradeLevelCharts() {
+            const gradeData = {
+                '6th Grade': {
+                    studentEngagement: [],
+                    higherOrder: [],
+                    prompting: [],
+                    standardsAligned: [],
+                    checksUnderstanding: [],
+                    releaseIndependence: [],
+                    respondingText: [],
+                    attentionLps: [],
+                    coTeaching: []
+                },
+                '7th Grade': {
+                    studentEngagement: [],
+                    higherOrder: [],
+                    prompting: [],
+                    standardsAligned: [],
+                    checksUnderstanding: [],
+                    releaseIndependence: [],
+                    respondingText: [],
+                    attentionLps: [],
+                    coTeaching: []
+                }
             };
             
             observations.forEach(obs => {
                 obs.intervals.forEach(interval => {
-                    engagementStats[interval.engagement]++;
+                    gradeData[obs.gradeLevel].studentEngagement.push(interval.percentages.studentEngagement || 0);
+                    gradeData[obs.gradeLevel].higherOrder.push(interval.percentages.higherOrder || 0);
+                    gradeData[obs.gradeLevel].prompting.push(interval.percentages.prompting || 0);
+                    gradeData[obs.gradeLevel].standardsAligned.push(interval.percentages.standardsAligned || 0);
+                    gradeData[obs.gradeLevel].checksUnderstanding.push(interval.percentages.checksUnderstanding || 0);
+                    gradeData[obs.gradeLevel].releaseIndependence.push(interval.percentages.releaseIndependence || 0);
+                    gradeData[obs.gradeLevel].respondingText.push(interval.percentages.respondingText || 0);
+                    gradeData[obs.gradeLevel].attentionLps.push(interval.percentages.attentionLps || 0);
+                    gradeData[obs.gradeLevel].coTeaching.push(interval.percentages.coTeaching || 0);
                 });
             });
-
-            const totalIntervals = totalObs * 3;
             
-            container.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="text-center p-4 bg-blue-50 rounded-lg">
-                        <div class="text-2xl font-bold text-blue-600">${totalObs}</div>
-                        <div class="text-sm text-gray-600">Total Observations</div>
-                    </div>
-                    <div class="text-center p-4 bg-green-50 rounded-lg">
-                        <div class="text-2xl font-bold text-green-600">${Math.round((engagementStats.high / totalIntervals) * 100)}%</div>
-                        <div class="text-sm text-gray-600">High Engagement</div>
-                    </div>
-                    <div class="text-center p-4 bg-purple-50 rounded-lg">
-                        <div class="text-2xl font-bold text-purple-600">${avgStudents}</div>
-                        <div class="text-sm text-gray-600">Avg Class Size</div>
-                    </div>
-                </div>
+            const categories = ['studentEngagement', 'higherOrder', 'prompting', 'standardsAligned', 'checksUnderstanding', 'releaseIndependence', 'respondingText', 'attentionLps', 'coTeaching'];
+            const chartIds = ['gradeEngagement', 'gradeHigherOrder', 'gradePrompting', 'gradeStandards', 'gradeChecks', 'gradeRelease', 'gradeText', 'gradeLps', 'gradeCoTeaching'];
+            
+            categories.forEach((category, index) => {
+                const chartId = chartIds[index];
+                const chart = window[chartId + 'Chart'];
                 
-                <div class="space-y-4">
-                    <h4 class="font-semibold">Recent Observations Summary</h4>
-                    ${observations.slice(-10).reverse().map(obs => `
-                        <div class="border rounded p-3">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="font-medium">${obs.teacherName}</span>
-                                <span class="text-sm text-gray-500">${new Date(obs.date).toLocaleDateString()}</span>
-                            </div>
-                            <div class="text-sm text-gray-600">
-                                ${obs.gradeLevel} • ${obs.subjectArea} • ${obs.studentCount} students
-                            </div>
-                            <div class="mt-2">
-                                <span class="text-xs font-medium">Engagement: </span>
-                                ${obs.intervals.map(interval => `<span class="inline-block w-2 h-2 rounded-full ${getEngagementColor(interval.engagement)} mr-1"></span>`).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+                if (chart) {
+                    const sixthGradeAvg = gradeData['6th Grade'][category].length > 0 ?
+                        Math.round(gradeData['6th Grade'][category].reduce((a, b) => a + b, 0) / gradeData['6th Grade'][category].length) : 0;
+                    const seventhGradeAvg = gradeData['7th Grade'][category].length > 0 ?
+                        Math.round(gradeData['7th Grade'][category].reduce((a, b) => a + b, 0) / gradeData['7th Grade'][category].length) : 0;
+                    
+                    chart.data.datasets[0].data = [sixthGradeAvg, seventhGradeAvg];
+                    chart.update();
+                }
+            });
         }
 
-        function exportData() {
-            if (observations.length === 0) {
-                alert('No data to export. Complete some walkthroughs first!');
-                return;
-            }
 
-            const csvContent = generateCSV();
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `walkthrough-data-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }
 
-        function generateCSV() {
-            const headers = [
-                'Date', 'Observer', 'Teacher', 'Grade', 'Subject', 'Students', 'Lesson Type',
-                'Interval 1 Student Engagement', 'Interval 1 Higher Order', 'Interval 1 Prompting', 'Interval 1 Standards', 'Interval 1 Checks', 'Interval 1 Release', 'Interval 1 Text', 'Interval 1 LPS', 'Interval 1 Co-teaching', 'Interval 1 Notes',
-                'Interval 2 Student Engagement', 'Interval 2 Higher Order', 'Interval 2 Prompting', 'Interval 2 Standards', 'Interval 2 Checks', 'Interval 2 Release', 'Interval 2 Text', 'Interval 2 LPS', 'Interval 2 Co-teaching', 'Interval 2 Notes',
-                'Interval 3 Student Engagement', 'Interval 3 Higher Order', 'Interval 3 Prompting', 'Interval 3 Standards', 'Interval 3 Checks', 'Interval 3 Release', 'Interval 3 Text', 'Interval 3 LPS', 'Interval 3 Co-teaching', 'Interval 3 Notes',
-                'Strengths', 'Growth Areas'
-            ];
-
-            const rows = observations.map(obs => [
-                obs.date,
-                obs.observerName,
-                obs.teacherName,
-                obs.gradeLevel,
-                obs.subjectArea,
-                obs.studentCount,
-                obs.lessonType,
-                obs.intervals[0].studentEngagement,
-                obs.intervals[0].higherOrder,
-                obs.intervals[0].prompting,
-                obs.intervals[0].standardsAligned,
-                obs.intervals[0].checksUnderstanding,
-                obs.intervals[0].releaseIndependence,
-                obs.intervals[0].respondingText,
-                obs.intervals[0].attentionLps,
-                obs.intervals[0].coTeaching,
-                `"${obs.intervals[0].notes || ''}"`,
-                obs.intervals[1].studentEngagement,
-                obs.intervals[1].higherOrder,
-                obs.intervals[1].prompting,
-                obs.intervals[1].standardsAligned,
-                obs.intervals[1].checksUnderstanding,
-                obs.intervals[1].releaseIndependence,
-                obs.intervals[1].respondingText,
-                obs.intervals[1].attentionLps,
-                obs.intervals[1].coTeaching,
-                `"${obs.intervals[1].notes || ''}"`,
-                obs.intervals[2].studentEngagement,
-                obs.intervals[2].higherOrder,
-                obs.intervals[2].prompting,
-                obs.intervals[2].standardsAligned,
-                obs.intervals[2].checksUnderstanding,
-                obs.intervals[2].releaseIndependence,
-                obs.intervals[2].respondingText,
-                obs.intervals[2].attentionLps,
-                obs.intervals[2].coTeaching,
-                `"${obs.intervals[2].notes || ''}"`,
-                `"${obs.strengths || ''}"`,
-                `"${obs.growthAreas || ''}"`
-            ]);
-
-            return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-        }
-    </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98741c9e73d71272',t:'MTc1OTIzOTQxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
-</html>
+        function updateSubjectAreaCharts() {
+            const subjectData = {};
+            
+            observations.forEach(obs => {
+                if (!subjectData[obs.subjectArea]) {
+                    subjectData[obs.subjectArea] = {
+                        studentEngagement: [],
+                        higherOrder: [],
+                        prompting: [],
+                        standardsAligned: [],
+                        checksUnderstanding: [],
+                        releaseIndependence: [],
+                        respondingText: [],
+                        attentionLps: [],
+                        coTeaching: []
+                    };
+                }
+                
+                obs.intervals.forEach(interval => {
+                    subjectData[obs.subject
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98793f41c2da6c4f',t:'MTc1OTI5MzI2MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
